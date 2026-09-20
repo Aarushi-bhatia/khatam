@@ -90,15 +90,50 @@ else
 fi
 aws lambda wait function-updated --function-name "$FN" --region "$REGION"
 
-say "Public HTTPS URL"
-aws lambda create-function-url-config --function-name "$FN" --region "$REGION" \
-  --auth-type NONE --cors '{"AllowOrigins":["*"],"AllowMethods":["*"],"AllowHeaders":["*"]}' \
-  >/dev/null 2>&1 || true
-aws lambda add-permission --function-name "$FN" --region "$REGION" \
-  --statement-id public-url --action lambda:InvokeFunctionUrl \
-  --principal '*' --function-url-auth-type NONE >/dev/null 2>&1 || true
+say "Public HTTPS URL (API Gateway)"
+# Not a Lambda Function URL: those return 403 on this account despite a
+# correct resource policy. HTTPS is non-negotiable either way — the Web
+# Speech API will not open a microphone on a plain-http origin.
+API_ID="$(aws apigatewayv2 get-apis --region "$REGION" \
+  --query "Items[?Name=='${NAME}-http'].ApiId | [0]" --output text)"
+if [ "$API_ID" = "None" ] || [ -z "$API_ID" ]; then
+  API_ID="$(aws apigatewayv2 create-api --region "$REGION" --name "${NAME}-http" \
+    --protocol-type HTTP \
+    --cors-configuration AllowOrigins='*',AllowMethods='*',AllowHeaders='*' \
+    --query ApiId --output text)"
+  echo "api created: $API_ID"
+else
+  echo "api exists: $API_ID"
+fi
 
-URL="$(aws lambda get-function-url-config --function-name "$FN" --region "$REGION" \
-        --query FunctionUrl --output text)"
+FN_ARN="arn:aws:lambda:${REGION}:${ACCOUNT}:function:${FN}"
+# create-integration rejects a bare function ARN; it wants the invoke URI.
+INT_ID="$(aws apigatewayv2 get-integrations --region "$REGION" --api-id "$API_ID" \
+  --query 'Items[0].IntegrationId' --output text 2>/dev/null)"
+if [ "$INT_ID" = "None" ] || [ -z "$INT_ID" ]; then
+  INT_ID="$(aws apigatewayv2 create-integration --region "$REGION" --api-id "$API_ID" \
+    --integration-type AWS_PROXY --payload-format-version 2.0 \
+    --integration-uri "arn:aws:apigateway:${REGION}:lambda:path/2015-03-31/functions/${FN_ARN}/invocations" \
+    --query IntegrationId --output text)"
+  for rk in 'ANY /' 'ANY /{proxy+}'; do
+    aws apigatewayv2 create-route --region "$REGION" --api-id "$API_ID" \
+      --route-key "$rk" --target "integrations/$INT_ID" >/dev/null
+  done
+  aws apigatewayv2 create-stage --region "$REGION" --api-id "$API_ID" \
+    --stage-name '$default' --auto-deploy >/dev/null
+  echo "routes created"
+fi
+
+# Re-add every time: a stale statement from a previous API id silently blocks
+# invocation, and add-permission refuses to overwrite a duplicate statement id.
+aws lambda remove-permission --region "$REGION" --function-name "$FN" \
+  --statement-id apigw-invoke >/dev/null 2>&1 || true
+aws lambda add-permission --region "$REGION" --function-name "$FN" \
+  --statement-id apigw-invoke --action lambda:InvokeFunction \
+  --principal apigateway.amazonaws.com \
+  --source-arn "arn:aws:execute-api:${REGION}:${ACCOUNT}:${API_ID}/*/*" >/dev/null
+
+URL="$(aws apigatewayv2 get-api --api-id "$API_ID" --region "$REGION" \
+        --query ApiEndpoint --output text)"
 printf '\n\033[1;32m  %s\033[0m\n\n' "$URL"
 rm -rf "$BUILD"
