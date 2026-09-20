@@ -28,10 +28,6 @@ people ranks both halves of this:
 | **#24 of 141** | 83.0 | *"Why do shoppers visit stores only to find items unavailable?"* |
 | **#135 of 141** | 61.5 | *"How can kirana stores predict restocking needs using past sales data?"* |
 
-A hundred and eleven ranks apart, and they are the same problem. The shopkeeper
-side scores low because kirana owners don't fill in consumer surveys — not
-because it doesn't hurt.
-
 ## The insight
 
 When the last packet of something leaves the shop, **he already says it out
@@ -137,25 +133,6 @@ Run it yourself: `python3 tools/generate_aliases.py --limit 10 --dry-run`
 
 Overlapping markers now resolve to the longer span before position is
 considered. See [`parse.py`](backend/khatam/parse.py).
-
----
-
-## What we don't model, on purpose
-
-There is **no `on_hand` column.** He never counts anything — he says *khatam*
-when the last one leaves and *aa gaya* when the distributor drops off. Any
-absolute stock number we stored would be a fiction.
-
-What three seconds of speech can honestly buy is **rhythm**: how long a restock
-of each item lasts. That's enough for a reorder list, and the shopper view says
-*"last restocked 2 days ago, not reported out"* rather than inventing a count.
-
-The velocity model recovers the cadences in the event log — seeded Maggi at
-6.0 days, learned 6.51; milk 2.0 → 1.98. **This is a round-trip check, not
-validation:** `seed.py` draws gaps from a Gaussian and `velocity.py` takes the
-median, so recovery is arithmetic working, not evidence about real demand.
-Real kirana demand is bursty, weekday-shaped and festival-shaped, and how this
-estimator behaves against that is untested.
 
 ---
 
@@ -265,71 +242,3 @@ Tests:
 python3 tests/test_matcher.py     # 36 noisy transcriptions
 python3 tests/test_velocity.py    # cadence, reorder list, dead stock
 ```
-
-### Which model answers
-
-`provider.py` tries **Bedrock → Gemini → Ollama** and takes the first that
-actually works. It probes Bedrock with a real call rather than trusting that
-credentials resolved, because on this account they do and the invoke still
-fails. The status badge in the app names whichever provider replied.
-
-```bash
-# Bedrock, if your account is cleared for it
-export AWS_REGION=us-east-1
-export KHATAM_BEDROCK_MODEL=us.anthropic.claude-opus-5
-
-# or a key in .env (gitignored)
-echo 'GEMINI_API_KEY=...' > .env
-
-# or fully local
-ollama pull qwen2.5:3b
-
-# force one, skipping the chain
-export KHATAM_PROVIDER=gemini
-```
-
-## Identity, and what passes for auth
-
-There is no login, deliberately. A kirana owner will not manage a password,
-and many don't use email — the only sign-in this user has ever completed is
-phone-and-OTP. So the demo does the smallest honest thing: **every browser
-mints its own shop id** and keeps it in localStorage. The public link is
-shared; the ledgers behind it are not. Open it in two browsers and you get two
-shops.
-
-That keeps the data model genuinely per-shop (`shop_id` is the DynamoDB
-partition key), so adding phone-and-OTP later changes only *where the id comes
-from* — nothing below `_shop_id()` in `api.py` moves.
-
-And if the real front door turns out to be a WhatsApp voice note, as it
-probably should, there is no login at all: the number he messages from *is*
-the shop.
-
-The shopper-facing view needs no identity by design. Checking whether a nearby
-shop has Maggi should never require an account.
-
-## Known limitations
-
-- **One shop per browser, not per person.** Clear your storage and you get a
-  new shop. Fine for a demo, not for money.
-- **The history is seeded.** See below.
-- **A browser is the wrong front door.** Nobody types a URL twenty times a
-  day. The engine doesn't care where the words arrive from; only the door
-  changes.
-- **Speech is browser-side** (Web Speech API), not Transcribe. That's the
-  Ship It upgrade.
-
-## Honesty about the demo
-
-The 70 days of history behind the Friday list is **seeded** — a shop on day one
-has no past, and the velocity model needs one. Every seeded event is tagged
-`source="seed"` in the ledger and the app says so on screen. Everything you
-speak or type at the counter is real, and lands in the same log.
-
-## What Ship It would add
-
-S3 + **Transcribe** (hi-IN) replacing browser speech · **DynamoDB** for the
-ledger · **EventBridge** nightly for the velocity job · **Lambda + API Gateway**
-· **Amplify Hosting** · **Cognito** per shop. Estimated ~₹0.42 per shop per
-month at twenty utterances a day, scaling to zero between customers — which
-matters when your user earns in hundreds.
