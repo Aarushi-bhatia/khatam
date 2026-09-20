@@ -2,7 +2,9 @@
 
 **A kirana shopkeeper says three words. A neighbourhood finds out what's on the shelf.**
 
-Built for **First Commit** (Bharat Builds Tour × AWS), 17–20 September 2026 · **Build It** track.
+Built for **First Commit** (Bharat Builds Tour × AWS), 17–20 September 2026.
+
+**Live:** https://c61v7k71qk.execute-api.us-east-1.amazonaws.com
 
 ---
 
@@ -157,7 +159,13 @@ the Ship It path is a change of storage class, not of model.
 
 ## AWS
 
-**Build It track — AWS open source:**
+Deployed on **Lambda** (the same FastAPI app via Mangum) behind **API Gateway**,
+with the event ledger in **DynamoDB** and the agent calling **Bedrock**. API Gateway
+rather than a Lambda Function URL because this account blocks public function URLs —
+and HTTPS is not optional here: the Web Speech API refuses to open a microphone on
+a plain-http origin, so the core interaction would simply not work.
+
+**AWS open source:**
 
 - **[Strands Agents SDK](https://github.com/strands-agents/sdk-python)** — the
   adjudicator agent (`strands.Agent` + `structured_output` against a Pydantic
