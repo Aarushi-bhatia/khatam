@@ -20,7 +20,7 @@
    Friday list that tears off like a distributor's order slip.
    ───────────────────────────────────────────────────────────── */
 :root{
-  --paper:#f5eddc; --paper-2:#ede2cc; --card:#fbf6ea;
+  --paper:#f5eddc; --paper-2:#ede2cc; --card:#fbf6ea; --desk:#e3d8c0;
   --rule:#ddd0b4; --rule-soft:#e8dcc3;
   --ink:#2a2118; --ink-2:#6b5b44; --ink-3:#9c8a6e;
   --red:#b0342a; --red-soft:#f7e3de;
@@ -34,7 +34,7 @@
 }
 @media (prefers-color-scheme:dark){
   :root{
-    --paper:#14110c; --paper-2:#1c1812; --card:#1f1a13;
+    --paper:#14110c; --paper-2:#1c1812; --card:#1f1a13; --desk:#0a0806;
     --rule:#332b20; --rule-soft:#282116;
     --ink:#f2e9d8; --ink-2:#b9a88b; --ink-3:#7f7059;
     --red:#e0705e; --red-soft:#2c1a16;
@@ -320,6 +320,39 @@ nav{
 .card,.row,.stock,.parked{animation:rise .2s ease both}
 @media (prefers-reduced-motion:reduce){
   .card,.row,.stock,.parked,.mic.live,.toast{animation:none;transition:opacity .1s}
+}
+
+/* ─────────── wide screens ───────────
+   Mobile is full-bleed paper. On a desktop the ruling and the red margin
+   rule must stop at the edge of the page, or the margin line reads as a
+   stray stripe down the middle of the browser. So above 640px the column
+   becomes an actual sheet of khata paper lying on a desk. */
+@media (min-width:640px){
+  body{background-color:var(--desk);background-image:none}
+
+  .wrap{
+    background-color:var(--paper);
+    background-image:repeating-linear-gradient(
+      to bottom, transparent, transparent calc(var(--line-h) - 1px),
+      var(--rule-soft) calc(var(--line-h) - 1px), var(--rule-soft) var(--line-h));
+    border-left:1px solid var(--rule);
+    border-right:1px solid var(--rule);
+  }
+
+  header{background:transparent;backdrop-filter:none;border-bottom:none}
+  header .wrap{border-bottom:2px solid var(--ink)}
+
+  main.wrap{            /* <main class="wrap">, not a .wrap inside main */
+    min-height:calc(100vh - 58px);   /* runs under the tab bar, no seam */
+    box-shadow:0 14px 34px color-mix(in srgb,var(--ink) 16%,transparent);
+  }
+
+  nav{background:transparent;backdrop-filter:none;border-top:none}
+  nav .tabs{
+    background:var(--paper);border-top:2px solid var(--ink);
+    border-left:1px solid var(--rule);border-right:1px solid var(--rule);
+    max-width:560px;
+  }
 }
 </style>
 </head>
