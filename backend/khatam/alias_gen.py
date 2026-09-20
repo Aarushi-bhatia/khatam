@@ -24,8 +24,11 @@ You list the words an Indian kirana (corner shop) owner actually says out loud \
 for a product, so a voice app can recognise them.
 
 Give the spoken forms, not the label on the box. Include:
-- the everyday Hindi word, romanised as people type it (doodh, sabun, namak, \
-anda, maachis, cheeni, tel, atta, chawal)
+- the bare everyday Hindi word ON ITS OWN, romanised as people type it: just \
+"doodh", not "amul doodh"; just "sabun", not "lifebuoy sabun". This one matters \
+most — a customer asks for the generic thing, not the brand. Always include it \
+as a standalone entry when one exists (doodh, sabun, namak, anda, maachis, \
+cheeni, tel, atta, chawal, chai patti, makhan, dahi, haldi, mirchi, pani)
 - the short brand name people really use ("parle g", not "Parle-G Biscuit \
 50g"; "lays", not "Lays Magic Masala Chips")
 - common misspellings speech-to-text produces on Indian English (colget, \
@@ -45,6 +48,15 @@ class Aliases(BaseModel):
     aliases: list[str] = Field(
         description="Spoken forms, lowercase, most common first, 4-8 entries."
     )
+
+
+class SkuAliases(BaseModel):
+    sku_id: str = Field(description="The id exactly as given in the input.")
+    aliases: list[str] = Field(description="4-8 spoken forms, most common first.")
+
+
+class AliasBatch(BaseModel):
+    items: list[SkuAliases] = Field(description="One entry per product, all of them.")
 
 
 def _clean(raw: list[str], limit: int = 8) -> list[str]:
@@ -68,12 +80,58 @@ def build_agent():
     return Agent(model=model, system_prompt=SYSTEM_PROMPT), label
 
 
-def aliases_for(agent, sku: dict) -> list[str]:
+def aliases_for(agent, sku: dict, attempts: int = 4) -> list[str]:
     prompt = (
         f"Product: {sku['brand']} {sku['name']}\n"
         f"Pack: {sku['pack']}\n"
         f"Category: {sku['category']}\n\n"
         "List the spoken forms."
     )
-    result = agent.structured_output(Aliases, prompt)
-    return _clean(result.aliases)
+    # Gemini's free tier 503s under load often enough that one attempt is not
+    # enough for a 78-SKU batch.
+    import time
+
+    last = None
+    for i in range(attempts):
+        try:
+            return _clean(agent.structured_output(Aliases, prompt).aliases)
+        except Exception as exc:
+            last = exc
+            if i < attempts - 1:
+                time.sleep(2 ** i)
+    raise last
+
+
+def aliases_for_batch(agent, skus: list[dict], attempts: int = 5) -> dict[str, list[str]]:
+    """Aliases for many products in one call.
+
+    Per-product calls exhaust a free-tier quota almost immediately — and this
+    is an onboarding batch job, not a request path, so there is no reason to
+    make one call per SKU. Ten products per call turns a 78-SKU catalogue into
+    eight requests.
+    """
+    import time
+
+    lines = [
+        f"{s['id']} | {s['brand']} {s['name']} | pack {s['pack']} | {s['category']}"
+        for s in skus
+    ]
+    prompt = (
+        "For EACH product below, list the spoken forms. Return one entry per "
+        "product, using the id exactly as given.\n\n" + "\n".join(lines)
+    )
+
+    last = None
+    for i in range(attempts):
+        try:
+            batch = agent.structured_output(AliasBatch, prompt)
+            return {
+                item.sku_id: _clean(item.aliases)
+                for item in batch.items
+                if item.sku_id in {s["id"] for s in skus}
+            }
+        except Exception as exc:
+            last = exc
+            if i < attempts - 1:
+                time.sleep(5 * (i + 1))      # 429s need real backoff, not 1s
+    raise last

@@ -47,7 +47,7 @@ def _score(cat: Catalogue) -> tuple[int, list[str]]:
 
 
 def run() -> int:
-    from khatam.alias_gen import aliases_for, build_agent
+    from khatam.alias_gen import aliases_for_batch, build_agent
 
     try:
         agent, provider = build_agent()
@@ -69,17 +69,25 @@ def run() -> int:
     bare_hits, _ = _score(Catalogue(stripped))
 
     generated = json.loads(json.dumps(stripped))
-    started, failures = time.time(), 0
-    for sku in generated["skus"]:
-        if sku["id"] not in targets:
-            continue
+    wanted = [s for s in generated["skus"] if s["id"] in targets]
+    started, failures, produced = time.time(), 0, {}
+
+    BATCH = 7
+    for i in range(0, len(wanted), BATCH):
+        chunk = wanted[i:i + BATCH]
         try:
-            sku["aliases"] = aliases_for(agent, sku)
-            print(f"  {sku['brand']} {sku['name']:<26.26s} -> {', '.join(sku['aliases'])}")
+            produced.update(aliases_for_batch(agent, chunk))
         except Exception as exc:
-            failures += 1
-            print(f"  {sku['brand']} {sku['name']:<26.26s} -> FAILED {type(exc).__name__}")
+            failures += len(chunk)
+            print(f"  batch {i // BATCH + 1} FAILED ({type(exc).__name__})")
+
+    for sku in generated["skus"]:
+        if sku["id"] in produced:
+            sku["aliases"] = produced[sku["id"]]
+            print(f"  {sku['brand']} {sku['name']:<24.24s} -> {', '.join(sku['aliases'])}")
     took = time.time() - started
+    print(f"\n  {len(produced)}/{len(wanted)} SKUs in "
+          f"{(len(wanted) + BATCH - 1) // BATCH} calls")
 
     gen_hits, gen_missed = _score(Catalogue(generated))
     n = len(COLLOQUIAL)

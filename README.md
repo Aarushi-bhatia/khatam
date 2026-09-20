@@ -102,16 +102,29 @@ ever going to type.
 ### Where the model earns its place
 
 Not in the escalation path. On the four ambiguous cases the deterministic
-fallback picks correctly anyway (4/4), so on this test set deleting the agent
-entirely would change no outcome — a result worth stating plainly rather than
-hiding.
+fallback picks correctly anyway (4/4), so on that test set deleting the agent
+entirely would change no outcome — worth stating plainly rather than hiding.
 
-It earns its place **generating the aliases**: `tools/generate_aliases.py`
-turns "Amul Taaza Toned Milk 500ml" into *doodh, milk, amul milk, taza* in one
-call. That is the onboarding barrier, it is a job no lookup table can do, and
-it is a one-time batch so it can be slow and cheap.
-`test_alias_generation.py` measures how much of the human-written gap the
-model recovers.
+It earns its place **generating the aliases**. `test_alias_generation.py` runs
+the experiment: throw away the hand-written aliases for the 20 SKUs behind the
+colloquial test words, regenerate them from brand + name + pack alone, and
+re-score.
+
+| Catalogue | Everyday words found |
+|---|---|
+| Hand-written aliases (363 of them, by me) | **19/20 — 95%** |
+| No aliases at all | **4/20 — 20%** |
+| **Model-generated** | **19/20 — 95%** |
+
+**The model recovers 100% of the gap a human had filled by hand** — 20 SKUs in
+3 batched calls, 12 seconds. The single word both versions miss is *kaapi*.
+
+That is a job no lookup table can do, and it is what makes a 500-SKU catalogue
+usable without anyone typing 2,400 aliases. It is also a one-time onboarding
+batch, so it can be slow and cheap — which is why it batches seven products
+per call rather than one.
+
+Run it yourself: `python3 tools/generate_aliases.py --limit 10 --dry-run`
 
 ### Three bugs worth recording
 
@@ -191,12 +204,17 @@ a plain-http origin, so the core interaction would simply not work.
 
 **AWS open source:**
 
-- **[Strands Agents SDK](https://github.com/strands-agents/sdk-python)** — the
-  adjudicator agent (`strands.Agent` + `structured_output` against a Pydantic
-  schema) that settles the 11% the deterministic layer can't.
-- **`strands.models.BedrockModel`** — Bedrock as the agent's model provider,
-  region and model id via `AWS_REGION` / `KHATAM_BEDROCK_MODEL`.
-- **boto3** — credential resolution and the Bedrock runtime session.
+- **[Strands Agents SDK](https://github.com/strands-agents/sdk-python)** — two
+  agents: the alias generator that makes the catalogue usable at all, and the
+  adjudicator that settles the ambiguous 11%. Both use `structured_output`
+  against a Pydantic schema.
+- **`strands.models.BedrockModel`** — the intended provider. This account was
+  never cleared for Bedrock: every model, Anthropic *and* Amazon's own Nova,
+  returns a bare `Operation not allowed`. `provider.py` therefore probes
+  Bedrock with a real call and falls through to Gemini, then to a local Ollama
+  model. Swapping providers is one line because Strands abstracts it — which
+  is the reason the project still has a working model path.
+- **boto3** — credential resolution and the Bedrock runtime probe.
 
 Without credentials on the machine the agent degrades to the top fuzzy match and
 **labels itself as having done so** (`decided_by: "fallback"`), rather than
