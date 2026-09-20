@@ -65,15 +65,6 @@ class AdjudicationResult:
     decided_by: str          # "model" | "fallback"
 
 
-def _credentials_available() -> bool:
-    try:
-        import boto3
-
-        return boto3.Session().get_credentials() is not None
-    except Exception:
-        return False
-
-
 class Adjudicator:
     """Lazily-built Strands agent; degrades to a deterministic choice.
 
@@ -85,6 +76,7 @@ class Adjudicator:
     def __init__(self, model_id: str | None = None, region: str | None = None):
         self.model_id = model_id or DEFAULT_MODEL_ID
         self.region = region or DEFAULT_REGION
+        self.provider: str | None = None     # set once a model is built
         self._agent = None
         self._unavailable_reason: str | None = None
         self._verified: bool | None = None      # None = built, never called
@@ -115,17 +107,14 @@ class Adjudicator:
             return self._agent
         if self._unavailable_reason:
             return None
-        if not _credentials_available():
-            self._unavailable_reason = "no AWS credentials on this machine"
-            return None
         try:
             from strands import Agent
-            from strands.models import BedrockModel
 
-            self._agent = Agent(
-                model=BedrockModel(model_id=self.model_id, region_name=self.region),
-                system_prompt=SYSTEM_PROMPT,
-            )
+            from .provider import build_model
+
+            model, label = build_model()          # Bedrock, else local Ollama
+            self.provider = label
+            self._agent = Agent(model=model, system_prompt=SYSTEM_PROMPT)
             return self._agent
         except Exception as exc:                      # pragma: no cover
             self._unavailable_reason = f"{type(exc).__name__}: {exc}"

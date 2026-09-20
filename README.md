@@ -73,25 +73,45 @@ against a closed set that small:
 3. Rank every SKU in *this shop's* catalogue. Auto-accept on a clear winner.
 4. Escalate only genuine ties to a **Strands agent** on Bedrock.
 
-### Measured
+### Measured — and what the measurements are worth
 
-| | |
-|---|---|
-| Noisy transcriptions resolved correctly | **36 / 36** (SKU, direction and quantity) |
-| Auto-accepted with no model call | **32** (89%) |
-| Escalated to the agent | **4** (11%) |
-| Deterministic path latency | ~7 ms |
+| Suite | Result | What it actually proves |
+|---|---|---|
+| `test_matcher.py` — 36 authored phrases | **36/36** | Least of the three. I wrote both these phrases *and* the 363 catalogue aliases, so it partly measures whether the system handles the failures its author anticipated |
+| `test_holdout.py` — 234 mechanical corruptions | **98.3% top-1** | Honest for spelling: corruptions derived from the canonical name, with any that an existing alias already covered discarded. But corrupting a full product title is an easier task than the real one |
+| `test_vocabulary_gap.py` — 20 everyday words | **95% → 20%** with aliases stripped | The one that matters, and the one we fail |
 
-The four escalations are exactly the ones a human would hesitate on:
+Deterministic path latency is ~7ms, and 89% of utterances resolve without any
+model call.
 
-| Utterance | Genuine ambiguity |
-|---|---|
-| `chai patti khatam ho gayi` | Red Label vs Tata Tea Gold — both are *chai patti* |
-| `parashoot tel khatam` | Parachute vs Dabur Amla — both are *tel* |
-| `nariyal tel khatam ho gaya` | same |
-| `shampoo ki patti khatam` | Clinic Plus bottle vs the 30-sachet strip |
+### The gap the numbers exposed
 
-**A smaller answer set beat a better model.** That's the whole technical thesis.
+Nobody at a counter says "Maggi 2-Minute Noodles". They say *maggi* — and for
+a great many products the spoken word shares no letters at all with the label
+on the box: milk is *doodh*, soap is *sabun*, matches are *maachis*.
+
+Strip the hand-written aliases and the matcher drops from **95% to 20%** on
+exactly those words. No amount of phonetic normalisation gets from *doodh* to
+"Amul Taaza Toned Milk", because that is a vocabulary problem, not a spelling
+one.
+
+So the phonetic matcher is not the clever part. **The 363 hand-written aliases
+are** — and a real 500-SKU shop needs roughly 2,400 of them that nobody is
+ever going to type.
+
+### Where the model earns its place
+
+Not in the escalation path. On the four ambiguous cases the deterministic
+fallback picks correctly anyway (4/4), so on this test set deleting the agent
+entirely would change no outcome — a result worth stating plainly rather than
+hiding.
+
+It earns its place **generating the aliases**: `tools/generate_aliases.py`
+turns "Amul Taaza Toned Milk 500ml" into *doodh, milk, amul milk, taza* in one
+call. That is the onboarding barrier, it is a job no lookup table can do, and
+it is a one-time batch so it can be slow and cheap.
+`test_alias_generation.py` measures how much of the human-written gap the
+model recovers.
 
 ### Three bugs worth recording
 
@@ -117,8 +137,12 @@ What three seconds of speech can honestly buy is **rhythm**: how long a restock
 of each item lasts. That's enough for a reorder list, and the shopper view says
 *"last restocked 2 days ago, not reported out"* rather than inventing a count.
 
-The velocity model recovers real cadences from the event log — seeded Maggi at
-6.0 days, learned 6.51; milk 2.0 → 1.98; Red Label 12.0 → 12.55.
+The velocity model recovers the cadences in the event log — seeded Maggi at
+6.0 days, learned 6.51; milk 2.0 → 1.98. **This is a round-trip check, not
+validation:** `seed.py` draws gaps from a Gaussian and `velocity.py` takes the
+median, so recovery is arithmetic working, not evidence about real demand.
+Real kirana demand is bursty, weekday-shaped and festival-shaped, and how this
+estimator behaves against that is untested.
 
 ---
 

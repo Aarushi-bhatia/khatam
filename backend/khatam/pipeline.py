@@ -165,4 +165,5 @@ class Khatam:
             "escalated_to_model": by_model,
             "escalation_rate": round(by_model / len(voice), 3) if voice else 0.0,
             "adjudicator": self.adjudicator.status,
+            "provider": self.adjudicator.provider,
         }
