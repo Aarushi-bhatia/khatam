@@ -242,3 +242,18 @@ Tests:
 python3 tests/test_matcher.py     # 36 noisy transcriptions
 python3 tests/test_velocity.py    # cadence, reorder list, dead stock
 ```
+
+## Honesty about the demo
+ 
+The 70 days of history behind the Friday list is **seeded** — a shop on day one
+has no past, and the velocity model needs one. Every seeded event is tagged
+`source="seed"` in the ledger and the app says so on screen. Everything you
+speak or type at the counter is real, and lands in the same log.
+ 
+## What Ship It would add
+ 
+S3 + **Transcribe** (hi-IN) replacing browser speech · **DynamoDB** for the
+ledger · **EventBridge** nightly for the velocity job · **Lambda + API Gateway**
+· **Amplify Hosting** · **Cognito** per shop. Estimated ~₹0.42 per shop per
+month at twenty utterances a day, scaling to zero between customers — which
+matters when your user earns in hundreds.
