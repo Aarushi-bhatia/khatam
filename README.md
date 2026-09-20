@@ -71,7 +71,7 @@ against a closed set that small:
 2. Score against a **consonant skeleton** too, so `maggi` / `meggi` / `magi` all
    reduce to `mg` and rescue each other.
 3. Rank every SKU in *this shop's* catalogue. Auto-accept on a clear winner.
-4. Escalate only genuine ties to a **Strands agent** on Bedrock.
+4. Escalate only genuine ties to a **Strands agent**.
 
 ### Measured — and what the measurements are worth
 
@@ -175,8 +175,8 @@ estimator behaves against that is untested.
               89% ──┴── 11%
                │        ▼
                │   ┌─────────────────────────────┐
-               │   │ Strands Agent + BedrockModel │  structured output,
-               │   │ (adjudicator.py)             │  constrained to candidates
+               │   │ Strands Agent (adjudicator) │  structured output,
+               │   │ provider.py picks the model │  constrained to candidates
                │   └─────────────┬───────────────┘
                ▼                 ▼
          ┌──────────────────────────┐
@@ -197,7 +197,7 @@ the Ship It path is a change of storage class, not of model.
 ## AWS
 
 Deployed on **Lambda** (the same FastAPI app via Mangum) behind **API Gateway**,
-with the event ledger in **DynamoDB** and the agent calling **Bedrock**. API Gateway
+with the event ledger in **DynamoDB**. API Gateway
 rather than a Lambda Function URL because this account blocks public function URLs —
 and HTTPS is not optional here: the Web Speech API refuses to open a microphone on
 a plain-http origin, so the core interaction would simply not work.
@@ -243,12 +243,26 @@ python3 tests/test_matcher.py     # 36 noisy transcriptions
 python3 tests/test_velocity.py    # cadence, reorder list, dead stock
 ```
 
-To put the agent on real Bedrock:
+### Which model answers
+
+`provider.py` tries **Bedrock → Gemini → Ollama** and takes the first that
+actually works. It probes Bedrock with a real call rather than trusting that
+credentials resolved, because on this account they do and the invoke still
+fails. The status badge in the app names whichever provider replied.
 
 ```bash
-export AWS_REGION=ap-south-1
-export KHATAM_BEDROCK_MODEL=apac.anthropic.claude-opus-5
-aws configure            # then enable model access in the Bedrock console
+# Bedrock, if your account is cleared for it
+export AWS_REGION=us-east-1
+export KHATAM_BEDROCK_MODEL=us.anthropic.claude-opus-5
+
+# or a key in .env (gitignored)
+echo 'GEMINI_API_KEY=...' > .env
+
+# or fully local
+ollama pull qwen2.5:3b
+
+# force one, skipping the chain
+export KHATAM_PROVIDER=gemini
 ```
 
 ## Identity, and what passes for auth
