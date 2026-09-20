@@ -209,6 +209,37 @@ export KHATAM_BEDROCK_MODEL=apac.anthropic.claude-opus-5
 aws configure            # then enable model access in the Bedrock console
 ```
 
+## Identity, and what passes for auth
+
+There is no login, deliberately. A kirana owner will not manage a password,
+and many don't use email — the only sign-in this user has ever completed is
+phone-and-OTP. So the demo does the smallest honest thing: **every browser
+mints its own shop id** and keeps it in localStorage. The public link is
+shared; the ledgers behind it are not. Open it in two browsers and you get two
+shops.
+
+That keeps the data model genuinely per-shop (`shop_id` is the DynamoDB
+partition key), so adding phone-and-OTP later changes only *where the id comes
+from* — nothing below `_shop_id()` in `api.py` moves.
+
+And if the real front door turns out to be a WhatsApp voice note, as it
+probably should, there is no login at all: the number he messages from *is*
+the shop.
+
+The shopper-facing view needs no identity by design. Checking whether a nearby
+shop has Maggi should never require an account.
+
+## Known limitations
+
+- **One shop per browser, not per person.** Clear your storage and you get a
+  new shop. Fine for a demo, not for money.
+- **The history is seeded.** See below.
+- **A browser is the wrong front door.** Nobody types a URL twenty times a
+  day. The engine doesn't care where the words arrive from; only the door
+  changes.
+- **Speech is browser-side** (Web Speech API), not Transcribe. That's the
+  Ship It upgrade.
+
 ## Honesty about the demo
 
 The 70 days of history behind the Friday list is **seeded** — a shop on day one

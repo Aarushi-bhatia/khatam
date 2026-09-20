@@ -446,6 +446,37 @@ nav{
 
 <script>
 const API = location.origin;
+
+/* Every browser gets its own shop. The public demo link is shared, but the
+   ledgers behind it are not — otherwise anyone opening the URL would be
+   writing into the same book. No account, no login: the id lives in
+   localStorage. Replacing this with phone-and-OTP later changes only where
+   the id comes from. */
+const SHOP = (() => {
+  try {
+    let id = localStorage.getItem("khatam_shop");
+    if (!id) {
+      id = "s" + (crypto.randomUUID?.() || Math.random().toString(36).slice(2)).replace(/-/g, "").slice(0, 10);
+      localStorage.setItem("khatam_shop", id);
+    }
+    return id;
+  } catch { return "demo"; }      // private mode / storage blocked
+})();
+
+async function api(path, opts = {}){
+  const headers = Object.assign({"X-Shop-Id": SHOP}, opts.headers || {});
+  const r = await fetch(API + path, Object.assign({}, opts, {headers}));
+  if (!r.ok) throw new Error(path + " -> " + r.status);
+  return r.json();
+}
+
+function post(path, body){
+  return api(path, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body),
+  });
+}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const money = n => "₹" + Math.round(n).toLocaleString("en-IN");
@@ -470,7 +501,7 @@ document.querySelectorAll(".tab").forEach(btn => {
 
 /* ---------------- boot ---------------- */
 async function boot(){
-  const s = await fetch(API + "/api/stats").then(r => r.json());
+  const s = await api("/api/stats");
   $("#shopName").textContent = s.shop_name;
   $("#shopSub").textContent = s.sku_count + " products on the shelf";
   const pill = $("#aiPill");
@@ -517,10 +548,7 @@ $("#typedIn").addEventListener("keydown", e => { if (e.key === "Enter") $("#type
 /* ---------------- interpret ---------------- */
 async function interpret(text){
   $("#result").innerHTML = `<div class="card muted">Matching “${esc(text)}” against the shelf…</div>`;
-  const r = await fetch(API + "/api/interpret", {
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({text})
-  }).then(r => r.json());
+  const r = await post("/api/interpret", {text});
   pending = r;
   render(r);
 }
@@ -592,13 +620,10 @@ function pick(skuId){
 
 async function confirmIt(){
   if (!pending) return;
-  await fetch(API + "/api/commit", {
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      sku_id: pending.sku_id, direction: pending.direction,
-      quantity: pending.quantity, raw_text: pending.raw_text,
-      confidence: pending.confidence, decided_by: pending.decided_by
-    })
+  await post("/api/commit", {
+    sku_id: pending.sku_id, direction: pending.direction,
+    quantity: pending.quantity, raw_text: pending.raw_text,
+    confidence: pending.confidence, decided_by: pending.decided_by
   });
   toast(pending.direction === "in" ? "स्टॉक दर्ज" : "दर्ज");
   clearResult();
@@ -608,7 +633,7 @@ async function confirmIt(){
 
 /* ---------------- lists ---------------- */
 async function loadRecent(){
-  const {events} = await fetch(API + "/api/recent").then(r => r.json());
+  const {events} = await api("/api/recent");
   $("#recent").innerHTML = events.length ? events.map(e => `
     <div class="row">
       <span class="dot ${e.direction === "in" ? "predicted" : "flagged"}"></span>
@@ -621,7 +646,7 @@ async function loadRecent(){
 }
 
 async function loadList(){
-  const d = await fetch(API + "/api/reorder").then(r => r.json());
+  const d = await api("/api/reorder");
   const flagged = d.items.filter(i => i.reason === "flagged");
   const predicted = d.items.filter(i => i.reason === "predicted");
 
@@ -670,7 +695,7 @@ async function loadList(){
 
 async function loadShelf(){
   const q = $("#shopQ").value.trim();
-  const {rows} = await fetch(API + "/api/shelf?q=" + encodeURIComponent(q)).then(r => r.json());
+  const {rows} = await api("/api/shelf?q=" + encodeURIComponent(q));
   $("#shelf").innerHTML = rows.length ? rows.map(r => {
     const when = r.updated_days_ago < 1
       ? "updated today"

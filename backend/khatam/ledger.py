@@ -196,3 +196,32 @@ class DynamoEventStore:
         with self.table.batch_writer() as batch:
             for it in resp.get("Items", []):
                 batch.delete_item(Key={"shop_id": it["shop_id"], "sk": it["sk"]})
+
+
+class SeededStore:
+    """A shop's own events, on top of a shared read-only history.
+
+    The velocity model needs a past, but writing 70 days of seed events into
+    every new visitor's partition would be hundreds of pointless writes each
+    time. The seed is deterministic, so we generate it in memory and merge it
+    with whatever this shop has actually recorded. Only real events persist.
+    """
+
+    def __init__(self, inner, seed_events: list[Event]):
+        self.inner = inner
+        self.seed_events = seed_events
+
+    def append(self, event: Event) -> Event:
+        return self.inner.append(event)
+
+    def extend(self, events: list[Event]) -> None:
+        self.inner.extend(events)
+
+    def all(self) -> list[Event]:
+        return sorted(self.seed_events + self.inner.all(), key=lambda e: e.ts)
+
+    def for_sku(self, sku_id: str) -> list[Event]:
+        return [e for e in self.all() if e.sku_id == sku_id]
+
+    def clear(self) -> None:
+        self.inner.clear()
