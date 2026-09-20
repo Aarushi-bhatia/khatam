@@ -6,3 +6,5 @@ dist/
 .env
 .aws-sam/
 *.local.json
+SUBMISSION.md
+data/ledger.jsonl
