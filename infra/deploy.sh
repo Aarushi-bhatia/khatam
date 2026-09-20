@@ -59,7 +59,7 @@ BUILD="$(mktemp -d)"
 "$ROOT/.venv/bin/pip" install -q --target "$BUILD" \
   --platform manylinux2014_x86_64 --python-version 3.12 \
   --implementation cp --only-binary=:all: \
-  fastapi mangum pydantic strands-agents 2>&1 | tail -3
+  fastapi mangum pydantic strands-agents google-genai 2>&1 | tail -3
 # boto3/botocore ship in the Lambda runtime; dropping them halves the zip.
 rm -rf "$BUILD"/boto3* "$BUILD"/botocore* "$BUILD"/pip* "$BUILD"/setuptools*
 cp -r "$ROOT/backend/khatam" "$ROOT/backend/api.py" "$BUILD/"
@@ -71,7 +71,10 @@ find "$BUILD" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
 echo "zip: $(du -h /tmp/khatam.zip | cut -f1)"
 
 say "Lambda"
-ENVJSON="Variables={KHATAM_TABLE=$TABLE,KHATAM_BEDROCK_MODEL=$MODEL}"
+# The key travels as a Lambda env var, read from the gitignored .env — never
+# on a command line and never in the repo.
+GEMINI_KEY="$(grep -m1 '^GEMINI_API_KEY=' "$ROOT/.env" 2>/dev/null | cut -d= -f2- || true)"
+ENVJSON="Variables={KHATAM_TABLE=$TABLE,KHATAM_BEDROCK_MODEL=$MODEL,GEMINI_API_KEY=$GEMINI_KEY}"
 if aws lambda get-function --function-name "$FN" --region "$REGION" >/dev/null 2>&1; then
   aws lambda update-function-code --function-name "$FN" --zip-file fileb:///tmp/khatam.zip \
     --region "$REGION" >/dev/null
