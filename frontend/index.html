@@ -3,7 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#16110c" />
+<meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#16110c" media="(prefers-color-scheme: dark)" />
+<meta name="description" content="Say what ran out. Get Friday's order list." />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Khatam" />
 <title>Khatam</title>
 <style>
 :root{
@@ -112,9 +119,59 @@ h2:first-child{margin-top:4px}
 .tag.in{background:var(--good-soft);color:var(--good)}
 .tag.model{background:var(--warn-soft);color:var(--warn)}
 
-.repair{font-size:12.5px;color:var(--ink-2);margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)}
-.repair s{color:var(--ink-3)}
-.repair b{color:var(--ink)}
+/* The repair is the most interesting thing this app does — show it properly
+   rather than burying it in grey caption text. */
+.repair{
+  margin:12px 0 0;padding-top:12px;border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:13px;
+}
+.repair .was{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+  color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--accent);
+  background:var(--surface-2);padding:3px 8px;border-radius:7px;
+}
+.repair .arrow{color:var(--accent);font-weight:700}
+.repair .now{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+  color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:7px;font-weight:600;
+}
+.repair .stats{width:100%;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+/* motion */
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card,.row,.stock{animation:rise .22s ease both}
+@media (prefers-reduced-motion:reduce){
+  .card,.row,.stock,.mic.live{animation:none}
+}
+
+/* grouped list headings */
+.grp{display:flex;align-items:baseline;gap:8px;margin:22px 0 9px}
+.grp:first-child{margin-top:2px}
+.grp h3{font-size:13px;margin:0;font-weight:650;letter-spacing:-.01em;color:var(--ink)}
+.grp .cnt{
+  font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;
+  background:var(--surface-2);color:var(--ink-2);font-variant-numeric:tabular-nums;
+}
+.grp .say{margin-left:auto;font-size:11.5px;color:var(--ink-3)}
+
+/* dead-stock hero */
+.parked{
+  background:linear-gradient(135deg,var(--accent-soft),var(--surface));
+  border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));
+  border-radius:var(--radius);padding:16px;margin-bottom:10px;
+}
+.parked .amt{font-size:30px;font-weight:750;letter-spacing:-.03em;color:var(--accent);
+  font-variant-numeric:tabular-nums;line-height:1.1}
+.parked .cap{font-size:12.5px;color:var(--ink-2);margin-top:4px}
+
+/* install */
+.install{
+  display:none;width:100%;margin-top:12px;padding:11px;border-radius:11px;
+  border:1px dashed color-mix(in srgb,var(--accent) 45%,transparent);
+  background:var(--accent-soft);color:var(--accent);font:inherit;font-weight:600;
+  font-size:13.5px;cursor:pointer;
+}
+.install.show{display:block}
 
 .actions{display:flex;gap:8px;margin-top:13px}
 .btn{
@@ -221,6 +278,8 @@ nav{
            autocomplete="off" autocapitalize="off" spellcheck="false" />
     <button id="typedGo">Go</button>
   </div>
+
+  <button class="install" id="installBtn">Add Khatam to your home screen</button>
 
   <div id="result"></div>
 
@@ -379,9 +438,13 @@ function render(r){
   let repair = "";
   const alias = r.candidates?.[0]?.matched_alias;
   if (alias && r.heard_as && alias.toLowerCase() !== r.heard_as.toLowerCase()){
-    repair = `<p class="repair">heard <s>“${esc(r.heard_as)}”</s> → matched
-      <b>${esc(alias)}</b> against ${esc(r.candidates.length)} candidates
-      · ${Math.round(r.confidence * 100)}% · ${esc(r.latency_ms)}ms</p>`;
+    repair = `<div class="repair">
+      <span class="was">${esc(r.heard_as)}</span>
+      <span class="arrow">→</span>
+      <span class="now">${esc(alias)}</span>
+      <span class="stats">repaired against ${r.candidates.length} products in this shop
+        · ${Math.round(r.confidence * 100)}% · ${esc(r.latency_ms)}ms</span>
+    </div>`;
   }
 
   const alts = (r.candidates || []).slice(1, 4).map(c =>
@@ -457,7 +520,7 @@ async function loadList(){
   $("#sPredicted").textContent = predicted.length;
   $("#sParked").textContent = money(d.dead_stock.reduce((a, b) => a + b.value_parked, 0));
 
-  $("#reorder").innerHTML = d.items.length ? d.items.map(i => `
+  const rows = list => list.map(i => `
     <div class="row ${i.reason}">
       <span class="dot ${i.reason}"></span>
       <div class="body">
@@ -465,9 +528,24 @@ async function loadList(){
         <div class="d">${esc(i.detail)}</div>
         ${i.reason === "predicted" ? `<div class="hint">you didn't tell us this one</div>` : ""}
       </div>
-    </div>`).join("") : `<div class="empty">Nothing to order. Rare.</div>`;
+    </div>`).join("");
 
-  $("#dead").innerHTML = d.dead_stock.length ? d.dead_stock.map(x => `
+  const group = (title, count, aside, body) => `
+    <div class="grp"><h3>${title}</h3><span class="cnt">${count}</span>
+      <span class="say">${aside}</span></div>${body}`;
+
+  $("#reorder").innerHTML = d.items.length
+    ? (flagged.length ? group("Ran out", flagged.length, "he told us", rows(flagged)) : "")
+      + (predicted.length ? group("About to run out", predicted.length, "we worked it out", rows(predicted)) : "")
+    : `<div class="empty">Nothing to order. Rare.</div>`;
+
+  const parked = d.dead_stock.reduce((a, b) => a + b.value_parked, 0);
+  $("#dead").innerHTML = d.dead_stock.length ? `
+    <div class="parked">
+      <div class="amt">${money(parked)}</div>
+      <div class="cap">bought, never asked for since. The only number here
+        he can't get by looking at his own shelves.</div>
+    </div>` + d.dead_stock.map(x => `
     <div class="row dead">
       <div class="body">
         <div class="t">${esc(x.label)}</div>
@@ -501,6 +579,30 @@ async function loadShelf(){
 let shelfTimer;
 $("#shopQ").addEventListener("input", () => {
   clearTimeout(shelfTimer); shelfTimer = setTimeout(loadShelf, 220);
+});
+
+/* ---------------- install ---------------- */
+if ("serviceWorker" in navigator){
+  window.addEventListener("load", () =>
+    navigator.serviceWorker.register("/sw.js").catch(() => {}));
+}
+
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  $("#installBtn").classList.add("show");
+});
+$("#installBtn").onclick = async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  $("#installBtn").classList.remove("show");
+};
+window.addEventListener("appinstalled", () => {
+  $("#installBtn").classList.remove("show");
+  toast("Installed");
 });
 
 boot();
