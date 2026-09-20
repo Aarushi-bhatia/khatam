@@ -505,10 +505,14 @@ async function boot(){
   $("#shopName").textContent = s.shop_name;
   $("#shopSub").textContent = s.sku_count + " products on the shelf";
   const pill = $("#aiPill");
-  // "ready" means credentials resolve; only "live" means a call has actually
-  // succeeded. Claiming live before that would be a badge that lies.
-  const label = {live: "Bedrock live", ready: "Bedrock ready", unavailable: "offline matching"};
-  pill.textContent = label[s.adjudicator] || "offline matching";
+  // Name the provider that actually answered. This said "Bedrock" regardless
+  // of what was running — which was untrue the moment the chain fell through
+  // to another model.
+  const who = (s.provider || "").split(":")[0];     // bedrock | gemini | ollama
+  pill.textContent =
+    s.adjudicator === "live"  ? `${who} live` :
+    s.adjudicator === "ready" ? `${who} ready` :
+                                "offline matching";
   pill.classList.toggle("on", s.adjudicator === "live");
   loadRecent();
 }
@@ -725,18 +729,42 @@ if ("serviceWorker" in navigator){
 }
 
 let deferredPrompt = null;
+const installed = () =>
+  matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+// Chrome fires beforeinstallprompt and we can open the real dialog. Safari on
+// iOS never fires it — installing there is Share -> Add to Home Screen, and
+// hiding the button on that platform meant iPhone users saw no option at all.
+function showInstall(){
+  if (installed()) return;
+  const btn = $("#installBtn");
+  btn.textContent = deferredPrompt
+    ? "Add Khatam to your home screen"
+    : isIOS
+      ? "Install: tap Share, then Add to Home Screen"
+      : "Install from your browser menu";
+  btn.classList.add("show");
+}
+
 window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
   deferredPrompt = e;
-  $("#installBtn").classList.add("show");
+  showInstall();
 });
+
 $("#installBtn").onclick = async () => {
-  if (!deferredPrompt) return;
+  if (!deferredPrompt){
+    toast(isIOS ? "Share → Add to Home Screen" : "Browser menu → Install");
+    return;
+  }
   deferredPrompt.prompt();
   await deferredPrompt.userChoice;
   deferredPrompt = null;
   $("#installBtn").classList.remove("show");
 };
+
+showInstall();      // don't wait for an event that may never come
 window.addEventListener("appinstalled", () => {
   $("#installBtn").classList.remove("show");
   toast("इंस्टॉल");
