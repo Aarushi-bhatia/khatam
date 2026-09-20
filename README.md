@@ -162,37 +162,60 @@ estimator behaves against that is untested.
 ## Architecture
 
 ```
-          voice (Web Speech API, hi-IN)
-                    │
-                    ▼
-         ┌──────────────────────┐
-         │  parse.py            │  direction · quantity · unit · product phrase
-         └──────────┬───────────┘
-                    ▼
-         ┌──────────────────────┐
-         │  matcher.py          │  phonetic normalise → rank this shop's SKUs
-         └──────────┬───────────┘
-              89% ──┴── 11%
-               │        ▼
-               │   ┌─────────────────────────────┐
-               │   │ Strands Agent (adjudicator) │  structured output,
-               │   │ provider.py picks the model │  constrained to candidates
-               │   └─────────────┬───────────────┘
-               ▼                 ▼
-         ┌──────────────────────────┐
-         │  ledger.py  (JSONL)      │  append-only event log
-         └──────────┬───────────────┘
-                    ▼
-         ┌──────────────────────────┐
-         │  velocity.py             │  cadence · reorder list · dead stock
-         └──────────┬───────────────┘
-                    ▼
-            FastAPI  →  single-file PWA
+ONBOARDING, once per shop
+─────────────────────────
+  a product list  ──▶  Strands Agent (alias generator)  ──▶  catalog.json
+                       "Amul Taaza Toned Milk"                363 spoken forms
+                        → doodh, amul doodh, taaza            per shop
+
+  Without this the matcher scores 20% on everyday words. With it, 95%.
+
+
+AT THE COUNTER, twenty times a day
+──────────────────────────────────
+  voice  (Web Speech API, hi-IN — returns Devanagari, not Latin)
+    │
+    ▼
+  parse.py        transliterate · direction · quantity · unit · product phrase
+    │
+    ▼
+  matcher.py      phonetic normalise → rank against this shop's SKUs
+    │
+    ├─── 89% ────────────────────────┐   ~7ms, no model call
+    │                                │
+    └─── 11% ──▶ Strands Agent       │   genuinely ambiguous only
+                 (adjudicator)       │   "tel" = two hair oils
+                 structured output,  │
+                 closed candidate set│
+                 provider.py picks:  │
+                 Bedrock→Gemini→Ollama
+                        │            │
+                        ▼            ▼
+              ┌──────────────────────────┐
+              │  shopkeeper taps Confirm │  ← nothing reaches the ledger
+              └────────────┬─────────────┘     until he does
+                           ▼
+  ledger.py     append-only event log
+                DynamoDB deployed  (shop_id, "<ts>#<event_id>")
+                JSONL locally
+                           │
+                           ▼
+  velocity.py   cadence · reorder list · dead stock
+                           │
+                           ▼
+  API Gateway ──▶ Lambda ──▶ FastAPI ──▶ single-file installable PWA
 ```
 
-The ledger is shaped as a DynamoDB table keyed on `(shop_id, ts#event_id)`, and
-`pipeline.py` is the seam both the local server and Lambda handlers sit on — so
-the Ship It path is a change of storage class, not of model.
+`pipeline.py` is the seam both the local server and the Lambda sit on, so the
+deployed handler runs identical logic to `uvicorn api:app` — the only
+difference is which `EventStore` is constructed.
+
+Two things the diagram is deliberately explicit about. **The model does not
+write to the ledger**: `interpret()` resolves an utterance and returns it,
+`commit()` writes, and only the shopkeeper's tap connects them — a wrong match
+costs him a tap, not a corrupted reorder list. And **the alias generator is the
+load-bearing agent**, not the adjudicator; it runs once at onboarding and is
+what makes a catalogue matchable at all.
 
 ## AWS
 
