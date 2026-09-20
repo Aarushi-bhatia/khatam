@@ -36,7 +36,7 @@
     {"id": "AMU-CHE", "brand": "Amul",      "name": "Cheese Slices",         "pack": "200g",   "category": "dairy",        "mrp": 145, "unit": "packet", "aliases": ["cheese", "chees", "amul cheese", "cheese slice", "paneer slice"]},
     {"id": "AMU-DAH", "brand": "Amul",      "name": "Dahi",                  "pack": "400g",   "category": "dairy",        "mrp": 45,  "unit": "cup",    "aliases": ["dahi", "curd", "amul dahi", "yogurt"]},
 
-    {"id": "LAY-MAG", "brand": "Lays",      "name": "Magic Masala Chips",    "pack": "52g",    "category": "snack",        "mrp": 20,  "unit": "packet", "aliases": ["lays", "lays magic masala", "chips", "les", "layes", "magic masala"]},
+    {"id": "LAY-MAG", "brand": "Lays",      "name": "Magic Masala Chips",    "pack": "52g",    "category": "snack",        "mrp": 20,  "unit": "packet", "aliases": ["lays", "lays magic masala", "chips", "les", "layes", "leja", "lej", "magic masala"]},
     {"id": "KUR-MAS", "brand": "Kurkure",   "name": "Masala Munch",          "pack": "55g",    "category": "snack",        "mrp": 20,  "unit": "packet", "aliases": ["kurkure", "kurkuray", "kur kure", "masala munch"]},
     {"id": "HAL-BHU", "brand": "Haldiram",  "name": "Bhujia",                "pack": "200g",   "category": "snack",        "mrp": 55,  "unit": "packet", "aliases": ["bhujia", "haldiram bhujia", "namkeen", "bhujiya", "sev"]},
     {"id": "HAL-MIX", "brand": "Haldiram",  "name": "Navratan Mix",          "pack": "200g",   "category": "snack",        "mrp": 60,  "unit": "packet", "aliases": ["navratan", "mixture", "haldiram mixture", "navratan mix"]},
@@ -51,7 +51,7 @@
     {"id": "LUX-BAR", "brand": "Lux",       "name": "Soft Touch Soap",       "pack": "100g",   "category": "personal_care","mrp": 45,  "unit": "bar",    "aliases": ["lux", "lux sabun", "luks", "lux soap"]},
     {"id": "DOV-BAR", "brand": "Dove",      "name": "Moisturising Bar",      "pack": "100g",   "category": "personal_care","mrp": 75,  "unit": "bar",    "aliases": ["dove", "dov", "dove sabun", "dove soap"]},
     {"id": "CLI-SHM", "brand": "Clinic Plus","name": "Strong & Long Shampoo","pack": "175ml",  "category": "personal_care","mrp": 130, "unit": "bottle", "aliases": ["clinic plus", "shampoo", "clinik plus", "shampu", "clinic shampoo"]},
-    {"id": "SHM-SAC", "brand": "Clinic Plus","name": "Shampoo Sachet",       "pack": "5ml x30", "category": "personal_care","mrp": 90, "unit": "strip",  "aliases": ["shampoo pouch", "shampoo sachet", "shampoo ki patti", "sachet", "patti"]},
+    {"id": "SHM-SAC", "brand": "Clinic Plus","name": "Shampoo Sachet",       "pack": "5ml x30", "category": "personal_care","mrp": 90, "unit": "strip",  "aliases": ["shampoo pouch", "shampoo sachet", "shampoo ki patti", "shampoo patti", "sachet"]},
     {"id": "PAR-HAI", "brand": "Parachute", "name": "Coconut Hair Oil",      "pack": "200ml",  "category": "personal_care","mrp": 120, "unit": "bottle", "aliases": ["parachute", "nariyal tel", "hair oil", "parashoot", "coconut oil", "balo ka tel"]},
     {"id": "DAB-AML", "brand": "Dabur",     "name": "Amla Hair Oil",         "pack": "200ml",  "category": "personal_care","mrp": 115, "unit": "bottle", "aliases": ["dabur amla", "amla oil", "amla tel", "dabur tel"]},
     {"id": "NIV-CRM", "brand": "Nivea",     "name": "Soft Cream",            "pack": "100ml",  "category": "personal_care","mrp": 199, "unit": "jar",    "aliases": ["nivea", "cream", "nivia", "nivea cream"]},

@@ -46,9 +46,100 @@ _STOPWORDS = {
 }
 
 
+# --- Devanagari -------------------------------------------------------------
+# Chrome's speech API returns Devanagari for hi-IN, not romanised Hinglish:
+# you get "मैगी खत्म", never "maggi khatam". Everything downstream works in
+# Latin, so we transliterate at the door.
+#
+# The romanisation is deliberately rough. It doesn't need to be correct — it
+# feeds straight into squash()/skeleton(), which throw away vowel length
+# anyway, and the consonant skeleton rescues the schwa problem ("parale" and
+# "parle" both reduce to "prl").
+
+_DEVA_CONSONANTS = {
+    "क": "k", "ख": "kh", "ग": "g", "घ": "gh", "ङ": "n",
+    "च": "ch", "छ": "chh", "ज": "j", "झ": "jh", "ञ": "n",
+    "ट": "t", "ठ": "th", "ड": "d", "ढ": "dh", "ण": "n",
+    "त": "t", "थ": "th", "द": "d", "ध": "dh", "न": "n",
+    "प": "p", "फ": "ph", "ब": "b", "भ": "bh", "म": "m",
+    "य": "y", "र": "r", "ल": "l", "व": "v", "ळ": "l",
+    "श": "sh", "ष": "sh", "स": "s", "ह": "h",
+    "क़": "k", "ख़": "kh", "ग़": "g", "ज़": "z", "ड़": "r", "ढ़": "rh", "फ़": "f",
+}
+
+_DEVA_VOWELS = {           # independent
+    "अ": "a", "आ": "a", "इ": "i", "ई": "i", "उ": "u", "ऊ": "u",
+    "ऋ": "ri", "ए": "e", "ऐ": "ai", "ओ": "o", "औ": "au",
+}
+
+_DEVA_MATRAS = {           # dependent, replace the inherent 'a'
+    "ा": "a", "ि": "i", "ी": "i", "ु": "u", "ू": "u",
+    "ृ": "ri", "े": "e", "ै": "ai", "ो": "o", "ौ": "au",
+}
+
+_DEVA_DIGITS = {d: str(i) for i, d in enumerate("०१२३४५६७८९")}
+
+_VIRAMA = "्"
+_NASALS = {"ं", "ँ"}      # anusvara, chandrabindu
+_VISARGA = "ः"
+
+
+def transliterate(text: str) -> str:
+    """Devanagari → rough Latin. Latin passes through untouched."""
+    if not any("ऀ" <= ch <= "ॿ" for ch in text):
+        return text
+
+    out: list[str] = []
+    inherent = False                 # a consonant is awaiting its vowel
+
+    for ch in text:
+        if ch in _DEVA_CONSONANTS:
+            if inherent:
+                out.append("a")
+            out.append(_DEVA_CONSONANTS[ch])
+            inherent = True
+        elif ch in _DEVA_MATRAS:
+            out.append(_DEVA_MATRAS[ch])
+            inherent = False
+        elif ch == _VIRAMA:
+            inherent = False         # explicit "no vowel here"
+        elif ch in _DEVA_VOWELS:
+            if inherent:
+                out.append("a")
+                inherent = False
+            out.append(_DEVA_VOWELS[ch])
+        elif ch in _NASALS:
+            if inherent:
+                out.append("a")
+                inherent = False
+            out.append("n")
+        elif ch == _VISARGA:
+            if inherent:
+                out.append("a")
+                inherent = False
+            out.append("h")
+        elif ch in _DEVA_DIGITS:
+            if inherent:
+                out.append("a")
+                inherent = False
+            out.append(_DEVA_DIGITS[ch])
+        else:
+            if inherent:
+                out.append("a")
+                inherent = False
+            out.append(ch)
+
+    if inherent:
+        out.append("a")
+
+    # Vowel length is noise; collapsing it here keeps the marker lists in
+    # parse.py to one spelling each ("gaya", not "gayaa").
+    return re.sub(r"([aeiou])\1+", r"\1", "".join(out))
+
+
 def basic_clean(text: str) -> str:
-    """Lowercase, strip punctuation, squeeze whitespace."""
-    text = text.lower().strip()
+    """Transliterate, lowercase, strip punctuation, squeeze whitespace."""
+    text = transliterate(text).lower().strip()
     text = re.sub(r"[^\w\s]", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 

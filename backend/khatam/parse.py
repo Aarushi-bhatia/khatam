@@ -16,7 +16,7 @@ from .normalize import basic_clean
 # "it left the shop" vs "it arrived from the distributor"
 
 _OUT_MARKERS = [
-    "khatam", "khatm", "katam", "khattam",      # finished
+    "khatam", "khatm", "katam", "khattam", "khatma",   # finished
     "ho gaya", "hogaya", "ho gaya hai",
     "gaya", "gayi", "gaye", "chala gaya",
     "nahi hai", "nahi bacha", "nahin hai", "nai hai",
@@ -27,7 +27,8 @@ _OUT_MARKERS = [
 
 _IN_MARKERS = [
     "aaya", "aayi", "aaye", "aa gaya", "aagaya", "agaya",
-    "mila", "mili", "mil gaya",
+    "a gaya", "a gayi", "a gaye",              # from Devanagari "आ गया"
+    "mila", "mili", "mil gaya", "mila gaya",
     "stock aaya", "delivery", "deliver", "received", "receive",
     "arrived", "aya", "ayi", "bhar diya", "bhar gaya",
 ]
@@ -81,6 +82,23 @@ class Utterance:
     unit: str | None = None
     product_phrase: str = ""
     markers: list[str] = field(default_factory=list)
+
+
+def _lookup(word: str, *tables: dict):
+    """Look a word up, tolerating the schwa Devanagari leaves behind.
+
+    "दस" transliterates to "dasa", not "das"; "चार" to "chara". Rather than
+    duplicating every entry, we retry once without a trailing 'a'.
+    """
+    for table in tables:
+        if word in table:
+            return table[word]
+    if len(word) > 2 and word.endswith("a"):
+        trimmed = word[:-1]
+        for table in tables:
+            if trimmed in table:
+                return table[trimmed]
+    return None
 
 
 def _spans(text: str, marker: str, direction: str) -> list[tuple[int, int, str, str]]:
@@ -138,17 +156,13 @@ def parse_utterance(raw: str) -> Utterance:
             if word.isdigit():
                 quantity, explicit = float(word), True
                 continue
-            if word in _HINDI_NUMBERS:
-                quantity, explicit = float(_HINDI_NUMBERS[word]), True
+            hit = _lookup(word, _HINDI_NUMBERS, _ENGLISH_NUMBERS, _FRACTIONS)
+            if hit is not None:
+                quantity, explicit = float(hit), True
                 continue
-            if word in _ENGLISH_NUMBERS:
-                quantity, explicit = float(_ENGLISH_NUMBERS[word]), True
-                continue
-            if word in _FRACTIONS:
-                quantity, explicit = _FRACTIONS[word], True
-                continue
-        if word in _UNITS and unit is None:
-            unit = _UNITS[word]
+        u = _lookup(word, _UNITS)
+        if u is not None and unit is None:
+            unit = u
             # keep it: some aliases *are* unit phrases ("shampoo ki patti")
         kept.append(word)
 
