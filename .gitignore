@@ -8,3 +8,4 @@ dist/
 *.local.json
 SUBMISSION.md
 data/ledger.jsonl
+data/shops/
