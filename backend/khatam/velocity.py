@@ -102,6 +102,19 @@ class DeadStockItem:
         return asdict(self)
 
 
+def _plural(days: float) -> str:
+    n = int(round(days))
+    return f"{n} day" if n == 1 else f"{n} days"
+
+
+def _ago(verb: str, days: float) -> str:
+    if days < 1:
+        return f"{verb} today"
+    if days < 2:
+        return f"{verb} yesterday"
+    return f"{verb} {int(days)} days ago"
+
+
 def _is_currently_out(state: SkuState) -> bool:
     """He said khatam and nothing has arrived since."""
     if state.last_out is None:
@@ -131,10 +144,7 @@ def build_reorder_list(
                 sku_id=sku_id,
                 label=label,
                 reason="flagged",
-                detail=(
-                    "ran out today" if days_out < 1
-                    else f"ran out {int(days_out)} days ago"
-                ),
+                detail=_ago("ran out", days_out),
                 days_since_restock=round(since_restock, 1) if since_restock else None,
                 cycle_days=cadence.cycle_days,
                 confident=cadence.confident,
@@ -151,8 +161,8 @@ def build_reorder_list(
                     label=label,
                     reason="predicted",
                     detail=(
-                        f"usually gone in {cadence.cycle_days:g} days · "
-                        f"last stocked {since_restock:.0f} days ago"
+                        f"usually lasts ~{_plural(cadence.cycle_days)} · "
+                        + _ago("stocked", since_restock)
                     ),
                     days_since_restock=round(since_restock, 1),
                     cycle_days=cadence.cycle_days,
@@ -191,10 +201,7 @@ def find_dead_stock(
             days_idle=round(idle, 1),
             units_in=units,
             value_parked=round(value, 2),
-            detail=(
-                f"₹{value:,.0f} sitting since {int(idle)} days ago. "
-                "Nobody has asked."
-            ),
+            detail=f"₹{value:,.0f} sitting {_plural(idle)}. Nobody has asked.",
         ))
 
     return sorted(dead, key=lambda d: -d.value_parked)

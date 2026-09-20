@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#16110c" />
+<title>Khatam</title>
+<style>
+:root{
+  --bg:#faf7f2; --surface:#fff; --surface-2:#f3ede4; --line:#e5dccd;
+  --ink:#1c1712; --ink-2:#6b6053; --ink-3:#9c9084;
+  --accent:#c2410c; --accent-soft:#fff1e8;
+  --good:#15803d; --good-soft:#eaf6ee;
+  --warn:#a16207; --warn-soft:#fdf6e3;
+  --radius:14px;
+  --font:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#16110c; --surface:#1f1913; --surface-2:#282019; --line:#3a2f24;
+    --ink:#f5efe6; --ink-2:#b5a795; --ink-3:#7d7061;
+    --accent:#fb923c; --accent-soft:#2e1c10;
+    --good:#4ade80; --good-soft:#12261a;
+    --warn:#fbbf24; --warn-soft:#2a2110;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font);
+  -webkit-font-smoothing:antialiased; line-height:1.45;
+  padding-bottom:calc(72px + env(safe-area-inset-bottom));
+}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+
+/* ---------- header ---------- */
+header{
+  position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+}
+.hd{display:flex;align-items:center;gap:10px;padding:12px 0}
+.mark{
+  width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;
+  display:grid;place-items:center;font-weight:700;font-size:15px;flex:none;
+}
+.hd h1{font-size:16px;margin:0;font-weight:650;letter-spacing:-.01em}
+.hd .sub{font-size:12px;color:var(--ink-3);margin:0}
+.pill{
+  margin-left:auto;font-size:11px;padding:4px 9px;border-radius:99px;
+  border:1px solid var(--line);color:var(--ink-2);background:var(--surface);white-space:nowrap;
+}
+.pill.on{color:var(--good);border-color:color-mix(in srgb,var(--good) 40%,transparent);background:var(--good-soft)}
+
+/* ---------- panels ---------- */
+section{display:none;padding-top:18px}
+section.active{display:block}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);
+   margin:26px 0 10px;font-weight:600}
+h2:first-child{margin-top:4px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.muted{color:var(--ink-2);font-size:13px}
+.empty{color:var(--ink-3);font-size:13px;padding:18px 2px;text-align:center}
+
+/* ---------- mic ---------- */
+.mic-wrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px 0 8px}
+.mic{
+  width:104px;height:104px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--accent);color:#fff;display:grid;place-items:center;
+  box-shadow:0 8px 28px color-mix(in srgb,var(--accent) 32%,transparent);
+  transition:transform .12s ease, box-shadow .2s ease;
+}
+.mic:active{transform:scale(.95)}
+.mic svg{width:40px;height:40px}
+.mic.live{animation:pulse 1.3s ease-in-out infinite}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 45%,transparent)}
+  50%{box-shadow:0 0 0 18px transparent}
+}
+.mic-hint{font-size:13px;color:var(--ink-2);text-align:center;min-height:20px}
+.mic-hint b{color:var(--ink);font-weight:600}
+
+.typed{display:flex;gap:8px;margin-top:6px}
+.typed input{
+  flex:1;padding:11px 13px;border-radius:11px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);font:inherit;font-size:15px;
+}
+.typed input:focus{outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:1px}
+.typed button{
+  padding:0 16px;border-radius:11px;border:1px solid var(--line);
+  background:var(--surface-2);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;
+}
+
+/* ---------- interpretation ---------- */
+.heard{
+  background:var(--surface-2);border:1px dashed var(--line);border-radius:11px;
+  padding:9px 12px;font-size:14px;color:var(--ink-2);margin-bottom:10px;
+}
+.heard .raw{color:var(--ink);font-style:italic}
+.resolve{display:flex;align-items:center;gap:11px}
+.resolve .qty{
+  min-width:40px;height:40px;padding:0 9px;border-radius:10px;background:var(--accent-soft);
+  color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:16px;flex:none;
+}
+.resolve .name{font-weight:600;font-size:15px;line-height:1.3}
+.resolve .why{font-size:12px;color:var(--ink-3);margin-top:2px}
+.tag{
+  display:inline-block;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:99px;
+  text-transform:uppercase;letter-spacing:.05em;vertical-align:middle;margin-left:6px;
+}
+.tag.out{background:var(--accent-soft);color:var(--accent)}
+.tag.in{background:var(--good-soft);color:var(--good)}
+.tag.model{background:var(--warn-soft);color:var(--warn)}
+
+.repair{font-size:12.5px;color:var(--ink-2);margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+.repair s{color:var(--ink-3)}
+.repair b{color:var(--ink)}
+
+.actions{display:flex;gap:8px;margin-top:13px}
+.btn{
+  flex:1;padding:11px;border-radius:11px;border:1px solid var(--line);cursor:pointer;
+  font:inherit;font-weight:600;font-size:14px;background:var(--surface-2);color:var(--ink);
+}
+.btn.primary{background:var(--accent);color:#fff;border-color:transparent}
+.btn:active{transform:translateY(1px)}
+
+.alts{margin-top:11px;display:flex;flex-direction:column;gap:6px}
+.alt{
+  display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:10px;
+  border:1px solid var(--line);background:var(--surface);cursor:pointer;
+  font:inherit;font-size:13.5px;color:var(--ink);text-align:left;width:100%;
+}
+.alt .sc{margin-left:auto;font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+/* ---------- lists ---------- */
+.row{
+  display:flex;align-items:flex-start;gap:11px;padding:12px 14px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:7px;
+}
+.row .dot{width:7px;height:7px;border-radius:50%;margin-top:7px;flex:none}
+.dot.flagged{background:var(--accent)}
+.dot.predicted{background:var(--warn)}
+.row .body{flex:1;min-width:0}
+.row .t{font-weight:600;font-size:14.5px;line-height:1.3}
+.row .d{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+.row.predicted{border-style:dashed;background:var(--warn-soft)}
+.row.predicted .hint{font-size:11.5px;color:var(--warn);font-weight:600;margin-top:4px}
+
+.dead .t{color:var(--ink)}
+.dead .money{font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+
+.stock{display:flex;align-items:center;gap:11px;padding:12px 14px;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--radius);margin-bottom:7px}
+.stock .badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;flex:none}
+.badge.yes{background:var(--good-soft);color:var(--good)}
+.badge.no{background:var(--surface-2);color:var(--ink-3)}
+.stock .meta{font-size:12px;color:var(--ink-3);margin-top:2px}
+
+.summary{display:flex;gap:8px;margin-bottom:14px}
+.stat{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+.stat .n{font-size:21px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat .l{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
+
+.search{display:flex;gap:8px;margin-bottom:14px}
+.search input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink);font:inherit;font-size:15px}
+
+.note{font-size:12px;color:var(--ink-3);padding:10px 12px;background:var(--surface-2);
+  border-radius:10px;margin-top:14px;line-height:1.5}
+
+/* ---------- tabs ---------- */
+nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;background:color-mix(in srgb,var(--bg) 92%,transparent);
+  backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.tabs{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.tab{
+  padding:11px 4px 12px;background:none;border:none;cursor:pointer;font:inherit;
+  font-size:11.5px;font-weight:600;color:var(--ink-3);display:flex;flex-direction:column;
+  align-items:center;gap:3px;
+}
+.tab svg{width:21px;height:21px}
+.tab.active{color:var(--accent)}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%);bottom:84px;z-index:40;
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;
+  font-size:13.5px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s, bottom .2s;
+}
+.toast.show{opacity:1;bottom:92px}
+</style>
+</head>
+<body>
+
+<header><div class="wrap hd">
+  <div class="mark">ख</div>
+  <div>
+    <h1 id="shopName">Khatam</h1>
+    <p class="sub" id="shopSub">loading…</p>
+  </div>
+  <span class="pill" id="aiPill">checking…</span>
+</div></header>
+
+<main class="wrap">
+
+<!-- ============ COUNTER ============ -->
+<section id="view-counter" class="active">
+  <div class="mic-wrap">
+    <button class="mic" id="micBtn" aria-label="Hold to speak">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>
+      </svg>
+    </button>
+    <div class="mic-hint" id="micHint">Tap and say <b>“Maggi khatam”</b></div>
+  </div>
+
+  <div class="typed">
+    <input id="typedIn" placeholder="…or type it: do parle g wala bada packet gaya"
+           autocomplete="off" autocapitalize="off" spellcheck="false" />
+    <button id="typedGo">Go</button>
+  </div>
+
+  <div id="result"></div>
+
+  <h2>Today at the counter</h2>
+  <div id="recent"><div class="empty">Nothing logged yet.</div></div>
+</section>
+
+<!-- ============ FRIDAY LIST ============ -->
+<section id="view-list">
+  <div class="summary">
+    <div class="stat"><div class="n" id="sFlagged">–</div><div class="l">Ran out</div></div>
+    <div class="stat"><div class="n" id="sPredicted">–</div><div class="l">Predicted</div></div>
+    <div class="stat"><div class="n" id="sParked">–</div><div class="l">Parked</div></div>
+  </div>
+
+  <h2>For the distributor</h2>
+  <div id="reorder"><div class="empty">Loading…</div></div>
+
+  <h2>Money on the shelf</h2>
+  <div id="dead"><div class="empty">Loading…</div></div>
+
+  <p class="note" id="seedNote"></p>
+</section>
+
+<!-- ============ SHOPPER ============ -->
+<section id="view-shop">
+  <div class="search">
+    <input id="shopQ" placeholder="Looking for something? e.g. maggi" autocomplete="off" />
+  </div>
+  <p class="muted" style="margin:-6px 0 14px">
+    What Ramesh Kirana has on the shelf right now — built entirely from what he
+    said out loud at the counter.
+  </p>
+  <div id="shelf"><div class="empty">Loading…</div></div>
+</section>
+
+</main>
+
+<nav><div class="tabs">
+  <button class="tab active" data-view="counter">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+    </svg>Counter</button>
+  <button class="tab" data-view="list">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+    </svg>Friday list</button>
+  <button class="tab" data-view="shop">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M3 9h18l-1.5 11H4.5L3 9zM8 9V6a4 4 0 0 1 8 0v3"/>
+    </svg>Nearby</button>
+</div></nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = location.origin;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const money = n => "₹" + Math.round(n).toLocaleString("en-IN");
+
+let pending = null;
+
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1700);
+}
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b === btn));
+    document.querySelectorAll("section").forEach(s =>
+      s.classList.toggle("active", s.id === "view-" + btn.dataset.view));
+    if (btn.dataset.view === "list") loadList();
+    if (btn.dataset.view === "shop") loadShelf();
+  };
+});
+
+/* ---------------- boot ---------------- */
+async function boot(){
+  const s = await fetch(API + "/api/stats").then(r => r.json());
+  $("#shopName").textContent = s.shop_name;
+  $("#shopSub").textContent = s.sku_count + " products on the shelf";
+  const pill = $("#aiPill");
+  if (s.adjudicator_online){ pill.textContent = "Bedrock live"; pill.classList.add("on"); }
+  else pill.textContent = "offline matching";
+  loadRecent();
+}
+
+/* ---------------- speech ---------------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+
+if (SR){
+  rec = new SR();
+  rec.lang = "hi-IN"; rec.interimResults = true; rec.continuous = false;
+  rec.onresult = e => {
+    const txt = Array.from(e.results).map(r => r[0].transcript).join("");
+    $("#micHint").innerHTML = "“<b>" + esc(txt) + "</b>”";
+    if (e.results[e.results.length - 1].isFinal) interpret(txt);
+  };
+  rec.onerror = e => { stopMic(); $("#micHint").textContent = "Didn't catch that — type it instead."; };
+  rec.onend = () => stopMic();
+} else {
+  $("#micHint").textContent = "This browser has no speech input — type it below.";
+}
+
+function stopMic(){ listening = false; $("#micBtn").classList.remove("live"); }
+
+$("#micBtn").onclick = () => {
+  if (!rec){ $("#typedIn").focus(); return; }
+  if (listening){ rec.stop(); return; }
+  listening = true;
+  $("#micBtn").classList.add("live");
+  $("#micHint").textContent = "Listening…";
+  try { rec.start(); } catch(_) {}
+};
+
+$("#typedGo").onclick = () => {
+  const v = $("#typedIn").value.trim();
+  if (v) interpret(v);
+};
+$("#typedIn").addEventListener("keydown", e => { if (e.key === "Enter") $("#typedGo").click(); });
+
+/* ---------------- interpret ---------------- */
+async function interpret(text){
+  $("#result").innerHTML = `<div class="card muted">Matching “${esc(text)}” against the shelf…</div>`;
+  const r = await fetch(API + "/api/interpret", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({text})
+  }).then(r => r.json());
+  pending = r;
+  render(r);
+}
+
+function render(r){
+  const box = $("#result");
+
+  if (!r.sku_id){
+    box.innerHTML = `<div class="card">
+      <div class="heard">heard <span class="raw">“${esc(r.raw_text)}”</span></div>
+      <div class="muted">${esc(r.reason)}</div>
+      <div class="actions"><button class="btn" onclick="clearResult()">Dismiss</button></div>
+    </div>`;
+    return;
+  }
+
+  const dirTag = r.direction === "in"
+    ? '<span class="tag in">restocked</span>'
+    : '<span class="tag out">ran out</span>';
+  const modelTag = r.decided_by === "model" ? '<span class="tag model">model</span>' : "";
+
+  // Show the repair only when the raw phrase differs from the matched alias —
+  // that contrast is the whole point of this layer.
+  let repair = "";
+  const alias = r.candidates?.[0]?.matched_alias;
+  if (alias && r.heard_as && alias.toLowerCase() !== r.heard_as.toLowerCase()){
+    repair = `<p class="repair">heard <s>“${esc(r.heard_as)}”</s> → matched
+      <b>${esc(alias)}</b> against ${esc(r.candidates.length)} candidates
+      · ${Math.round(r.confidence * 100)}% · ${esc(r.latency_ms)}ms</p>`;
+  }
+
+  const alts = (r.candidates || []).slice(1, 4).map(c =>
+    `<button class="alt" onclick="pick('${c.sku_id}')">${esc(c.label)}
+       <span class="sc">${c.score.toFixed(2)}</span></button>`).join("");
+
+  box.innerHTML = `<div class="card">
+    <div class="heard">heard <span class="raw">“${esc(r.raw_text)}”</span></div>
+    <div class="resolve">
+      <div class="qty">${r.quantity % 1 === 0 ? r.quantity : r.quantity.toFixed(2)}</div>
+      <div>
+        <div class="name">${esc(r.label)} ${dirTag}${modelTag}</div>
+        <div class="why">${esc(r.reason)}</div>
+      </div>
+    </div>
+    ${repair}
+    <div class="actions">
+      <button class="btn primary" onclick="confirmIt()">Confirm</button>
+      <button class="btn" onclick="clearResult()">Cancel</button>
+    </div>
+    ${alts ? `<div class="alts">${alts}</div>` : ""}
+  </div>`;
+}
+
+function clearResult(){ pending = null; $("#result").innerHTML = ""; $("#typedIn").value = ""; }
+
+function pick(skuId){
+  if (!pending) return;
+  const c = pending.candidates.find(x => x.sku_id === skuId);
+  pending.sku_id = skuId;
+  pending.label = c.label;
+  pending.decided_by = "human";
+  pending.reason = "you corrected it";
+  render(pending);
+}
+
+async function confirmIt(){
+  if (!pending) return;
+  await fetch(API + "/api/commit", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      sku_id: pending.sku_id, direction: pending.direction,
+      quantity: pending.quantity, raw_text: pending.raw_text,
+      confidence: pending.confidence, decided_by: pending.decided_by
+    })
+  });
+  toast(pending.direction === "in" ? "Stock added" : "Added to Friday's list");
+  clearResult();
+  $("#micHint").innerHTML = 'Tap and say <b>“Maggi khatam”</b>';
+  loadRecent();
+}
+
+/* ---------------- lists ---------------- */
+async function loadRecent(){
+  const {events} = await fetch(API + "/api/recent").then(r => r.json());
+  $("#recent").innerHTML = events.length ? events.map(e => `
+    <div class="row">
+      <span class="dot ${e.direction === "in" ? "predicted" : "flagged"}"></span>
+      <div class="body">
+        <div class="t">${esc(e.label)}</div>
+        <div class="d">“${esc(e.raw_text)}” · ${e.direction === "in" ? "restocked" : "ran out"}
+          ${e.decided_by === "model" ? "· settled by model" : ""}</div>
+      </div>
+    </div>`).join("") : `<div class="empty">Nothing logged yet.</div>`;
+}
+
+async function loadList(){
+  const d = await fetch(API + "/api/reorder").then(r => r.json());
+  const flagged = d.items.filter(i => i.reason === "flagged");
+  const predicted = d.items.filter(i => i.reason === "predicted");
+
+  $("#sFlagged").textContent = flagged.length;
+  $("#sPredicted").textContent = predicted.length;
+  $("#sParked").textContent = money(d.dead_stock.reduce((a, b) => a + b.value_parked, 0));
+
+  $("#reorder").innerHTML = d.items.length ? d.items.map(i => `
+    <div class="row ${i.reason}">
+      <span class="dot ${i.reason}"></span>
+      <div class="body">
+        <div class="t">${esc(i.label)}</div>
+        <div class="d">${esc(i.detail)}</div>
+        ${i.reason === "predicted" ? `<div class="hint">you didn't tell us this one</div>` : ""}
+      </div>
+    </div>`).join("") : `<div class="empty">Nothing to order. Rare.</div>`;
+
+  $("#dead").innerHTML = d.dead_stock.length ? d.dead_stock.map(x => `
+    <div class="row dead">
+      <div class="body">
+        <div class="t">${esc(x.label)}</div>
+        <div class="d"><span class="money">${money(x.value_parked)}</span>
+          sitting ${Math.round(x.days_idle)} days · nobody has asked</div>
+      </div>
+    </div>`).join("") : `<div class="empty">Nothing idle.</div>`;
+
+  $("#seedNote").textContent =
+    "Cycles are learned from this shop's own history. The history behind this demo " +
+    "is seeded — 70 days of plausible events — because a shop on day one has no past.";
+}
+
+async function loadShelf(){
+  const q = $("#shopQ").value.trim();
+  const {rows} = await fetch(API + "/api/shelf?q=" + encodeURIComponent(q)).then(r => r.json());
+  $("#shelf").innerHTML = rows.length ? rows.map(r => {
+    const when = r.updated_days_ago < 1
+      ? "updated today"
+      : `updated ${Math.round(r.updated_days_ago)}d ago`;
+    return `<div class="stock">
+      <div style="flex:1;min-width:0">
+        <div class="t" style="font-weight:600;font-size:14.5px">${esc(r.label)}</div>
+        <div class="meta">${money(r.mrp)} · ${when}</div>
+      </div>
+      <span class="badge ${r.in_stock ? "yes" : "no"}">${r.in_stock ? "in stock" : "out"}</span>
+    </div>`;
+  }).join("") : `<div class="empty">Nothing matching that.</div>`;
+}
+
+let shelfTimer;
+$("#shopQ").addEventListener("input", () => {
+  clearTimeout(shelfTimer); shelfTimer = setTimeout(loadShelf, 220);
+});
+
+boot();
+</script>
+</body>
+</html>
