@@ -505,8 +505,11 @@ async function boot(){
   $("#shopName").textContent = s.shop_name;
   $("#shopSub").textContent = s.sku_count + " products on the shelf";
   const pill = $("#aiPill");
-  if (s.adjudicator_online){ pill.textContent = "Bedrock live"; pill.classList.add("on"); }
-  else pill.textContent = "offline matching";
+  // "ready" means credentials resolve; only "live" means a call has actually
+  // succeeded. Claiming live before that would be a badge that lies.
+  const label = {live: "Bedrock live", ready: "Bedrock ready", unavailable: "offline matching"};
+  pill.textContent = label[s.adjudicator] || "offline matching";
+  pill.classList.toggle("on", s.adjudicator === "live");
   loadRecent();
 }
 

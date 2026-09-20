@@ -87,10 +87,28 @@ class Adjudicator:
         self.region = region or DEFAULT_REGION
         self._agent = None
         self._unavailable_reason: str | None = None
+        self._verified: bool | None = None      # None = built, never called
 
     @property
     def available(self) -> bool:
-        return self._build() is not None
+        return self._build() is not None and self._verified is not False
+
+    @property
+    def status(self) -> str:
+        """What we can honestly claim about Bedrock right now.
+
+        Having credentials is not the same as being able to invoke a model —
+        model access is a separate console toggle, and the failure only shows
+        up on the first real call. Reporting "live" before one has succeeded
+        would be a badge that lies.
+        """
+        if self._build() is None:
+            return "unavailable"
+        if self._verified is True:
+            return "live"
+        if self._verified is False:
+            return "unavailable"
+        return "ready"
 
     def _build(self):
         if self._agent is not None:
@@ -147,6 +165,8 @@ class Adjudicator:
                 Adjudication, self._prompt(raw, phrase, candidates, catalogue)
             )
         except Exception as exc:                      # pragma: no cover
+            self._verified = False
+            self._unavailable_reason = type(exc).__name__
             top = candidates[0]
             return AdjudicationResult(
                 sku_id=top.sku_id,
@@ -154,6 +174,8 @@ class Adjudicator:
                 reason=f"model call failed ({type(exc).__name__}), used best fuzzy match",
                 decided_by="fallback",
             )
+
+        self._verified = True
 
         valid = {c.sku_id for c in candidates}
         if verdict.sku_id is not None and verdict.sku_id not in valid:
