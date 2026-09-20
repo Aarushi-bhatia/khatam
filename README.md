@@ -4,7 +4,7 @@
 
 Built for **First Commit** (Bharat Builds Tour × AWS), 17–20 September 2026.
 
-**Live:** https://c61v7k71qk.execute-api.us-east-1.amazonaws.com
+**Live:** https://1sv82b01ch.execute-api.us-east-1.amazonaws.com
 
 ---
 
